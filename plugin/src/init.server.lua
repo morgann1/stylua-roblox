@@ -13,7 +13,9 @@ if game:GetService("RunService"):IsRunning() then
 	return
 end
 
-local ConfigInfo = {
+type ConfigEntry = { DefaultValue: string | number | boolean, Options: string }
+
+local ConfigInfo: { [string]: ConfigEntry } = {
 	column_width = {
 		DefaultValue = 120,
 		Options = "<number>",
@@ -84,29 +86,41 @@ local function generateSettings()
 	return Output
 end
 
-local function validateSettings(Module: LuaSourceContainer)
-	local Settings
+local function validateSettings(Module: LuaSourceContainer): { [string]: string | number | boolean }?
 	local source = ScriptEditorService:GetEditorSource(Module)
-	local result: any, _: any = (loadstring :: any)(source)
-	if result == nil then
-		return false
-	end
-	local _, err = pcall(function()
-		Settings = result()
-	end)
-	if err then
-		return false
-	end
-	for Cname, CValue in Settings do
-		if type(CValue) ~= type(ConfigInfo[Cname].DefaultValue) then
-			return false
-		end
-		if type(ConfigInfo[Cname].DefaultValue) == "string" then
-			local Options = string.split(ConfigInfo[Cname].Options:gsub("%s+", ""), ",")
-			if not table.find(Options, CValue) then
-				return false
+	local Settings: { [string]: string | number | boolean } = {}
+
+	for line in source:gmatch("[^\n]+") do
+		local key, value = line:match("^%s*(%w+)%s*=%s*(.-)%s*,")
+		if key and value and ConfigInfo[key] then
+			local info = ConfigInfo[key]
+			if value:match('^"(.*)"$') then
+				local str = value:match('^"(.*)"$') :: string
+				if type(info.DefaultValue) ~= "string" then
+					return nil
+				end
+				local Options = string.split(info.Options:gsub("%s+", ""), ",")
+				if not table.find(Options, str) then
+					return nil
+				end
+				Settings[key] = str
+			elseif value == "true" or value == "false" then
+				if type(info.DefaultValue) ~= "boolean" then
+					return nil
+				end
+				Settings[key] = value == "true"
+			else
+				local num = tonumber(value)
+				if not num or type(info.DefaultValue) ~= "number" then
+					return nil
+				end
+				Settings[key] = num
 			end
 		end
+	end
+
+	if next(Settings) == nil then
+		return nil
 	end
 	return Settings
 end
@@ -193,6 +207,7 @@ local function formatter(script: LuaSourceContainer)
 			["Content-Type"] = "text/plain",
 		},
 		Body = ScriptEditorService:GetEditorSource(script),
+		Compress = Enum.HttpCompression.None,
 	})
 	if not success then
 		warn(`[StyLua] Connecting to server failed: {result}`)
@@ -225,7 +240,7 @@ end
 
 local function format()
 	if StudioService.ActiveScript then
-		formatter(StudioService.ActiveScript)
+		formatter(StudioService.ActiveScript :: LuaSourceContainer)
 		return
 	end
 	local Selected = Selection:Get()
