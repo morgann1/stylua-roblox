@@ -86,6 +86,9 @@ jobs:
             TAG="${GITHUB_REF#refs/tags/}"
           fi
           TAG="${TAG#refs/tags/}"
+          # Ensure tag has v prefix
+          TAG="${TAG#v}"
+          TAG="v$TAG"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Download all artifacts
