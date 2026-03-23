@@ -2,6 +2,7 @@
 /Plugin.rbxmx
 /Plugin.rbxm
 *.d.lua
+*.d.luau
 *.exe
 *.zip
 ignore
