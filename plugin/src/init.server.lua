@@ -1,6 +1,5 @@
 --!strict
 
-local AnalyticsService = game:GetService("AnalyticsService")
 local HttpService = game:GetService("HttpService")
 local ScriptEditorService = game:GetService("ScriptEditorService")
 local StudioService = game:GetService("StudioService")
@@ -57,7 +56,7 @@ local ConfigInfo = {
 	},
 }
 
-function wrap(Value)
+local function wrap(Value)
 	if type(Value) == "string" then
 		return '"' .. Value .. '"'
 	else
@@ -65,7 +64,7 @@ function wrap(Value)
 	end
 end
 
-function generateSettings()
+local function generateSettings()
 	local Settings = plugin:GetSetting("StyLuaSettings")
 	local Output = "-- StyLua Configuration\nreturn {\n\n"
 	for CName, CValue in Settings do
@@ -85,9 +84,10 @@ function generateSettings()
 	return Output
 end
 
-function validateSettings(Module)
+local function validateSettings(Module: LuaSourceContainer)
 	local Settings
-	local result: any, _: any = loadstring(Module.Source)
+	local source = ScriptEditorService:GetEditorSource(Module)
+	local result: any, _: any = (loadstring :: any)(source)
 	if result == nil then
 		return false
 	end
@@ -97,7 +97,6 @@ function validateSettings(Module)
 	if err then
 		return false
 	end
-	-- type and option checks
 	for Cname, CValue in Settings do
 		if type(CValue) ~= type(ConfigInfo[Cname].DefaultValue) then
 			return false
@@ -112,45 +111,51 @@ function validateSettings(Module)
 	return Settings
 end
 
-local Connection
-function applySettings()
-	local Module = AnalyticsService.StyLua_Settings
+local SettingsModule: ModuleScript? = nil
+
+local Connection: RBXScriptConnection?
+local function applySettings()
+	assert(SettingsModule, "Settings module not created")
 	Connection = ScriptEditorService.TextDocumentDidChange:Connect(function()
-		local NewSetting = validateSettings(Module)
+		local NewSetting = validateSettings(SettingsModule :: ModuleScript)
 		if NewSetting then
 			plugin:SetSetting("StyLuaSettings", NewSetting)
 		end
 	end)
 end
 
-function openSettings()
-	local Module = AnalyticsService:FindFirstChild("StyLua_Settings")
-
-	if not Module then
-		Module = Instance.new("ModuleScript")
-		Module.Name = "StyLua_Settings"
-		Module.Archivable = false
-		Module.Parent = AnalyticsService
+local function openSettings()
+	if not SettingsModule then
+		local existing = workspace:FindFirstChild("StyLua_Settings")
+		if existing and existing:IsA("ModuleScript") then
+			SettingsModule = existing
+		else
+			local Module = Instance.new("ModuleScript")
+			Module.Name = "StyLua_Settings"
+			Module.Archivable = false
+			Module.Parent = workspace
+			SettingsModule = Module
+		end
 	end
 
 	if not plugin:GetSetting("StyLuaSettings") then
 		local ConfigTable = {}
-		for ConfigName, ConfigData in pairs(ConfigInfo) do
+		for ConfigName, ConfigData in ConfigInfo do
 			ConfigTable[ConfigName] = ConfigData.DefaultValue
 		end
 		plugin:SetSetting("StyLuaSettings", ConfigTable)
 	end
 
-	ScriptEditorService:UpdateSourceAsync(Module, function()
+	ScriptEditorService:UpdateSourceAsync(SettingsModule :: ModuleScript, function()
 		return generateSettings()
 	end)
 	if Connection == nil then
 		applySettings()
 	end
-	plugin:OpenScript(Module)
+	ScriptEditorService:OpenScriptDocumentAsync(SettingsModule :: ModuleScript)
 end
 
-function fetchSettings()
+local function fetchSettings()
 	local Config = {}
 
 	-- Place Only Settings
@@ -167,7 +172,7 @@ function fetchSettings()
 		return Config
 	end
 
-	--Global Settings
+	-- Global Settings
 	for setting, value in plugin:GetSetting("StyLuaSettings") do
 		if value ~= ConfigInfo[setting].DefaultValue then
 			Config[setting] = value
@@ -176,11 +181,10 @@ function fetchSettings()
 	return Config
 end
 
-local FormatAction =
-	plugin:CreatePluginAction("StyLua Format", "Format", "Formats the code", "rbxassetid://15177733701", true)
-
-function formatter(script)
+local function formatter(script: LuaSourceContainer)
 	local ConfigJSON = fetchSettings()
+
+	local recordingId = ChangeHistoryService:TryBeginRecording("StyLua Format")
 
 	local success, result = pcall(HttpService.RequestAsync, HttpService, {
 		Method = "POST" :: "POST",
@@ -192,27 +196,34 @@ function formatter(script)
 	})
 	if not success then
 		warn(`[StyLua] Connecting to server failed: {result}`)
+		if recordingId then
+			ChangeHistoryService:FinishRecording(recordingId, Enum.FinishRecordingOperation.Cancel)
+		end
 	elseif not result.Success then
 		local body = result.Body :: any
 		if body:match("<!DOCTYPE html>") then
-			--[[
-			For some reason it gives error message with doctype (on roblox output only) 
-			so did some parsing and cleaning up for better error message
-			--]]
 			warn(`[StyLua] {body:match("<pre>(.-)</pre>"):gsub("&#39;", "'"):gsub("<br>", "\n"):sub(1, -1)}`)
+		end
+		if recordingId then
+			ChangeHistoryService:FinishRecording(recordingId, Enum.FinishRecordingOperation.Cancel)
 		end
 	else
 		if ScriptEditorService:GetEditorSource(script) == result.Body then
+			if recordingId then
+				ChangeHistoryService:FinishRecording(recordingId, Enum.FinishRecordingOperation.Cancel)
+			end
 			return
 		end
 		ScriptEditorService:UpdateSourceAsync(script, function()
 			return result.Body
 		end)
-		ChangeHistoryService:SetWaypoint("StyLua")
+		if recordingId then
+			ChangeHistoryService:FinishRecording(recordingId, Enum.FinishRecordingOperation.Commit)
+		end
 	end
 end
 
-function format()
+local function format()
 	if StudioService.ActiveScript then
 		formatter(StudioService.ActiveScript)
 		return
@@ -224,6 +235,9 @@ function format()
 		end
 	end
 end
+
+local FormatAction =
+	plugin:CreatePluginAction("StyLua Format", "Format", "Formats the code", "rbxassetid://15177733701", true)
 
 local toolbar = plugin:CreateToolbar("StyLua")
 
