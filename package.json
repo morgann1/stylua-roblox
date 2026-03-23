@@ -13,12 +13,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@angablue/exe": "^3.2.5",
     "@johnnymorganz/stylua": "^2.4.0",
     "express": "^5.2.1",
     "node-hide-console-window": "^2.2.0",
     "patch-package": "^8.0.1",
     "trayicon": "^1.2.2"
   },
-  "packageManager": "pnpm@10.32.1"
+  "pkg": {
+    "assets": [
+      "assets/**/*"
+    ]
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.14.1"
+  }
 }

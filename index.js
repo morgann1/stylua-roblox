@@ -54,7 +54,7 @@ app.listen(18259, () => {
 Tray.create(
   {
     icon: fs.readFileSync(
-      path.join(path.dirname(__filename), "assets/icon.ico"),
+      path.join(__dirname, "assets/icon.ico"),
     ),
     title: "StyLua",
   },

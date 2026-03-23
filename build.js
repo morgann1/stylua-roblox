@@ -1,16 +1,16 @@
-const exe = require("@angablue/exe");
+const { execSync } = require("child_process");
 
-const build = exe({
-  entry: "index.js",
-  out: "StyLua-Roblox.exe",
-  icon: "./assets/icon.ico",
-  executionLevel: "asInvoker",
-  properties: {
-    FileDescription: "StyLua Roblox",
-    ProductName: "StyLua Roblox",
-    LegalCopyright: "https://github.com/Barocena/StyLua-Roblox",
-    OriginalFilename: "StyLua-Roblox.exe",
-  },
-});
+execSync(
+  'npx pkg package.json --targets node24-win-x64 --output StyLua-Roblox.exe --icon assets/icon.ico',
+  { stdio: "inherit" },
+);
 
-build.then(() => console.log("Build completed!"));
+// Sign the executable with the self-signed cert (skip in CI)
+if (!process.env.CI) {
+  execSync(
+    'pwsh -NoProfile -ExecutionPolicy Bypass -File sign.ps1',
+    { stdio: "inherit" },
+  );
+}
+
+console.log("Build completed!");
