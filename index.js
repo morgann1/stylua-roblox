@@ -16,6 +16,7 @@ const EnumList = {
   ["line_endings"]: StyLua.LineEndings,
   ["quote_style"]: StyLua.QuoteStyle,
   ["space_after_function_names"]: StyLua.SpaceAfterFunctionNames,
+  ["block_newline_gaps"]: StyLua.BlockNewlineGaps,
 };
 
 app.use(express.text());

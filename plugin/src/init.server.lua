@@ -48,7 +48,11 @@ local ConfigInfo = {
 	},
 	space_after_function_names = {
 		DefaultValue = "Never",
-		Options = "Never, Definitons, Calls, Always",
+		Options = "Never, Definitions, Calls, Always",
+	},
+	block_newline_gaps = {
+		DefaultValue = "Never",
+		Options = "Never, Preserve",
 	},
 	sort_requires = {
 		DefaultValue = false,
