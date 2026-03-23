@@ -1,11 +1,9 @@
 const exe = require("@angablue/exe");
 
 const build = exe({
-  entry: "package.json",
+  entry: "index.js",
   out: "StyLua-Roblox.exe",
-  target: "node20-win-x64",
   icon: "./assets/icon.ico",
-  pkg: ["-C", "Brotli"],
   executionLevel: "asInvoker",
   properties: {
     FileDescription: "StyLua Roblox",
