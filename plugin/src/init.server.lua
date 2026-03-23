@@ -178,7 +178,8 @@ local function fetchSettings()
 		local PlaceConfig = validateSettings(PlaceSetting)
 		if PlaceConfig then
 			for setting, value in PlaceConfig :: any do
-				if value ~= ConfigInfo[setting].DefaultValue then
+				local info = ConfigInfo[setting]
+				if info and value ~= info.DefaultValue then
 					Config[setting] = value
 				end
 			end
@@ -188,7 +189,8 @@ local function fetchSettings()
 
 	-- Global Settings
 	for setting, value in plugin:GetSetting("StyLuaSettings") do
-		if value ~= ConfigInfo[setting].DefaultValue then
+		local info = ConfigInfo[setting]
+		if info and value ~= info.DefaultValue then
 			Config[setting] = value
 		end
 	end
