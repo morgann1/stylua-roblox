@@ -6,9 +6,6 @@ const ConsoleWindow = require("node-hide-console-window");
 const fs = require("fs");
 const path = require("path");
 
-// StyLua Roblox
-// Version 1.3.0
-
 const EnumList = {
   ["call_parentheses"]: StyLua.CallParenType,
   ["collapse_simple_statement"]: StyLua.CollapseSimpleStatement,
@@ -43,7 +40,7 @@ app.post("/stylua", (req, res) => {
     input,
     Configs,
     StyLua.Range.from_values(),
-    StyLua.OutputVerification.None
+    StyLua.OutputVerification.None,
   );
 
   res.setHeader("Content-Type", "text/plain");
@@ -57,13 +54,13 @@ app.listen(18259, () => {
 Tray.create(
   {
     icon: fs.readFileSync(
-      path.join(path.dirname(__filename), "assets/icon.ico")
+      path.join(path.dirname(__filename), "assets/icon.ico"),
     ),
     title: "StyLua",
   },
   function (tray) {
     tray.setMenu(tray.item("Quit", () => process.exit(0)));
-  }
+  },
 );
 
 ConsoleWindow.hideConsole();
